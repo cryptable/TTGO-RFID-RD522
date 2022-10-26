@@ -44,12 +44,8 @@
 #define SPI_SCK         14
 
 // Replace the next variables with your SSID/Password combination
-/*
 const char* ssid = "<Wifi SSID>";
 const char* password = "<Wifi password>";
-*/
-const char* ssid = "Cryptable";
-const char* password = "aquatictomato116";
 
 // Add your MQTT Broker IP address, example:
 /*
