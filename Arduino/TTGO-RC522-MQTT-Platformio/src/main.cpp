@@ -30,12 +30,6 @@
  * More pin layouts for other boards can be found here: https://github.com/miguelbalboa/rfid#pin-layout
  */
 
-/*
- * MQTT python client http://www.steves-internet-guide.com/into-mqtt-python-client/
- * MQTT broker installation: http://www.steves-internet-guide.com/install-mosquitto-linux/
- * MQTT client for ESP32 https://pubsubclient.knolleary.net/api
- * MQTT Set Username/Password http://www.steves-internet-guide.com/mqtt-username-password-example/
- */
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <SPI.h>
@@ -50,13 +44,25 @@
 #define SPI_SCK         14
 
 // Replace the next variables with your SSID/Password combination
+/*
 const char* ssid = "<Wifi SSID>";
 const char* password = "<Wifi password>";
+*/
+const char* ssid = "Cryptable";
+const char* password = "aquatictomato116";
 
 // Add your MQTT Broker IP address, example:
+/*
 const char* mqtt_server = "<MQTT broker IP>";
 const char* mqtt_username = "<MQTT Username>";
 const char* mqtt_password = "<MQTT Password>";
+const char* mqtt_student_id = "<Student ID without spaces>";
+*/
+
+const char* mqtt_server = "3.72.41.159";
+const char* mqtt_username = "IoT";
+const char* mqtt_password = "DitIsGoed";
+const char* mqtt_student_id = "s123456";
 
 MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
 
@@ -68,7 +74,7 @@ byte nuidPICC[4];
 void printHex(byte *buffer, byte bufferSize);
 void printDec(byte *buffer, byte bufferSize);
 void setup_wifi();
-void callback(char* topic, byte* message, unsigned int length);
+void on_message(char* topic, byte* message, unsigned int length);
 void reconnect();
 char *stringHex(byte *buffer, byte bufferSize);
 
@@ -78,6 +84,12 @@ long lastMsg = 0;
 char msg[50];
 int value = 0;
 
+// Arduino setup routine, which initializes:
+// - Serial port to send information to terminal
+// - SPI to communicate with the RFID reader
+// - RFID reader
+// - the Wifi connection
+// - mqtt server callback functions to receive the responses from the server.py application 
 void setup() { 
   Serial.begin(115200);
   SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);			// Init SPI bus
@@ -93,9 +105,14 @@ void setup() {
   
   setup_wifi();
   mqttClient.setServer(mqtt_server, 1883);
-  mqttClient.setCallback(callback);
+  mqttClient.setCallback(on_message);
 }
- 
+
+// Main Arduino loop
+// - connect to MQTT server and retrieve its messages if there are messages
+// - When a card is present, read the UID
+// - When we have a new UID, we will send it to MQTT Server with a message "Hello, world"
+// Does this makes sense? Not yet!
 void loop() {
 
   if (!mqttClient.connected()) {
@@ -142,7 +159,7 @@ void loop() {
     printDec(rfid.uid.uidByte, rfid.uid.size);
     Serial.println();
     char publishTopic[255] = {0};
-    sprintf(publishTopic, "AP/rfid/lezer/%s",stringHex(rfid.uid.uidByte, rfid.uid.size));
+    sprintf(publishTopic, "AP/rfid/lezer/%s/%s", mqtt_student_id, stringHex(rfid.uid.uidByte, rfid.uid.size));
     mqttClient.publish(publishTopic, "Hello, world");
   }
   else Serial.println(F("Card read previously."));
@@ -154,6 +171,7 @@ void loop() {
   rfid.PCD_StopCrypto1();
 }
 
+// Code which setup the Wifi connection
 void setup_wifi() {
   delay(10);
   // We start by connecting to a WiFi network
@@ -174,7 +192,8 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void callback(char* topic, byte* message, unsigned int length) {
+// Code when the server.py publishes (send back) its response
+void on_message(char* topic, byte* message, unsigned int length) {
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
   Serial.print(". Message: ");
@@ -190,39 +209,35 @@ void callback(char* topic, byte* message, unsigned int length) {
 
   // If a message is received on the topic esp32/output, you check if the message is either "on" or "off". 
   // Changes the output state according to the message
-  if (String(topic) == "esp32/output") {
-    Serial.print("Changing output to ");
-    if(messageTemp == "on"){
-      Serial.println("on");
-    }
-    else if(messageTemp == "off"){
-      Serial.println("off");
-    }
+  if(messageTemp == "0"){
+    Serial.println("door closed");
+  }
+  else {
+    Serial.println("door open");
   }
 }
 
+// Connect to MQTT Server
 void reconnect() {
   // Loop until we're reconnected
   while (!mqttClient.connected()) {
-    Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (mqttClient.connect(mqtt_server, mqtt_username, mqtt_password)) {
-      Serial.println("connected");
-      // Subscribe
-      // mqttClient.subscribe("esp32/output");
-    } else {
+    if (! mqttClient.connect(mqtt_server, mqtt_username, mqtt_password)) {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
     }
+    Serial.print(".");
   }
+  char subscribeTopic[255] = {0};
+  sprintf(subscribeTopic, "AP/rfid/deur/%s/+", mqtt_student_id);
+  mqttClient.subscribe(subscribeTopic);
+
 }
 
-/**
- * Helper routine to dump a byte array as hex values to Serial. 
- */
+// Helper routine to dump a byte array as hex values to Serial. 
 void printHex(byte *buffer, byte bufferSize) {
   for (byte i = 0; i < bufferSize; i++) {
     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
@@ -230,9 +245,7 @@ void printHex(byte *buffer, byte bufferSize) {
   }
 }
 
-/**
- * Helper routine to dump a byte array as hex values to Serial. 
- */
+// Helper routine to dump a byte array as hex values to Serial. 
 char bufferke[256];
 char *stringHex(byte *buffer, byte bufferSize) {
   char hexChars[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -245,9 +258,7 @@ char *stringHex(byte *buffer, byte bufferSize) {
   return bufferke;
 }
 
-/**
- * Helper routine to dump a byte array as dec values to Serial.
- */
+// Helper routine to dump a byte array as dec values to Serial.
 void printDec(byte *buffer, byte bufferSize) {
   for (byte i = 0; i < bufferSize; i++) {
     Serial.print(buffer[i] < 0x10 ? " 0" : " ");

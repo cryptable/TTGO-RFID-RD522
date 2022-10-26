@@ -73,6 +73,48 @@ To use the RC522:
 
 Download the mfrc522.py and upload it to your T-Beam.
 
+RC522-RFID-MQTT
+---------------
+
+### Setup a Mosquitto MQTT Server
+
+For testing you need to setup a MQTT server, maybe a teacher or friend can help to set it up.
+
+- MQTT broker installation: http://www.steves-internet-guide.com/install-mosquitto-linux/
+- MQTT Set Username/Password http://www.steves-internet-guide.com/mqtt-username-password-example/
+- MQTT python client http://www.steves-internet-guide.com/into-mqtt-python-client/
+- MQTT client for ESP32 https://pubsubclient.knolleary.net/api
+
+### Python based central server
+
+Check out the code using git: [Python Server](https://github.com/cryptable/mqtt-rfid)
+
+Change the settings in server.py to point to the IP address of the MQTT server. Fill in you student ID, so it scans for the messages for your student ID.
+
+#### Security Tests
+
+- Check what happens, when you use someone elses student ID
+
+### RC522-RFID-MQTT project
+
+The idea is that you RC522 RFID reader will send some information from the card to a central system. This central server uses a message broker (MQTT Server). The TTGO-RFID-MQTT will publish the information from the RFID reader to the message broker (MQTT-Server), where the server will read the messages, process them and return a response to the message broker. The TTGO-RFID will read its messages from the queue of the message broker to see which action it has to take.
+
+![Architecture](./IoT-RC522-RFID-MQTT.png)
+
+Checkout the code using git: [TTGO-RFID-MQTT](https://github.com/cryptable/TTGO-RFID-RD522)
+
+1) Change the Wifi settings
+1) Change the IP address to point the MQTT Server
+1) Change the student ID to point to your student ID message queue
+1) Fill in the username/password for MQTT Server
+
+Check if all works...
+
+#### Security Tests
+
+- Check what happens, when you use someone elses student ID
+- Use Wireshark or tcpdump on the MQTT server to check the messages received on the server
+
 References:
 -----------
 
