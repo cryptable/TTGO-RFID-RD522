@@ -48,7 +48,15 @@
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
 
+void printHex(byte *buffer, byte bufferSize);
+void printDec(byte *buffer, byte bufferSize);
+
+char NUID[4];
+
 void setup() {
+	
+	memset(NUID, 0, 4);
+
 	Serial.begin(115200);		// Initialize serial communications with the PC
 	while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
 	SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);			// Init SPI bus
@@ -69,6 +77,35 @@ void loop() {
 		return;
 	}
 
-	// Dump debug info about the card; PICC_HaltA() is automatically called
-	mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
+	if (memcmp(NUID, mfrc522.uid.uidByte, 4) != 0) {
+		Serial.println(F("The NUID tag is:"));
+		Serial.print(F("In hex: "));
+		printHex(mfrc522.uid.uidByte, mfrc522.uid.size);
+		Serial.println();
+		Serial.print(F("In dec: "));
+		printDec(mfrc522.uid.uidByte, mfrc522.uid.size);
+		Serial.println();
+
+		// Dump debug info about the card; PICC_HaltA() is automatically called
+		mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
+
+		memcpy(NUID, mfrc522.uid.uidByte, 4);
+	}
+
+}
+
+// Helper routine to dump a byte array as hex values to Serial. 
+void printHex(byte *buffer, byte bufferSize) {
+  for (byte i = 0; i < bufferSize; i++) {
+    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+    Serial.print(buffer[i], HEX);
+  }
+}
+
+// Helper routine to dump a byte array as dec values to Serial.
+void printDec(byte *buffer, byte bufferSize) {
+  for (byte i = 0; i < bufferSize; i++) {
+    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+    Serial.print(buffer[i], DEC);
+  }
 }

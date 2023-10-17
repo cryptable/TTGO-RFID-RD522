@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../TTGO-RC522-PlatformIO"
+		},
+		{
+			"name": "TTGO-RC522-MQTT-Platformio",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}
